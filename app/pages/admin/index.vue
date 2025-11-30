@@ -318,6 +318,7 @@ import { ref, onMounted } from 'vue'
 definePageMeta({
   title: 'Admin Dashboard',
   layout: false,
+  middleware: 'admin',
 })
 
 const activeTab = ref<'banks' | 'borrowers'>('banks')

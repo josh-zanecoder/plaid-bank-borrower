@@ -202,7 +202,7 @@
                 />
                 <span class="ml-2 text-sm text-gray-600">Remember me</span>
               </label>
-              <NuxtLink to="/forgot-password" class="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition">
+              <NuxtLink class="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition">
                 Forgot password?
               </NuxtLink>
             </div>
@@ -288,8 +288,7 @@
 
           <!-- Sign Up Link -->
           <div class="text-center">
-            <NuxtLink
-              to="/register"
+            <NuxtLink   
               class="inline-flex items-center justify-center w-full py-3 px-4 border-2 border-gray-300 rounded-xl text-base font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200"
             >
               Start Your Application
@@ -362,14 +361,24 @@ const handleLogin = async () => {
     const user = await login(form.email, form.password)
     const idToken = await user.getIdToken()
 
-    const response = await $fetch<{ success: boolean; user?: any }>('/api/auth/login', {
+    const response = await $fetch<{ success: boolean; user?: { role?: string } }>('/api/auth/login', {
       method: 'POST',
-      body: { idToken }
+      body: { idToken },
+      credentials: 'include'
     })
 
-    if (response.success) {
-      // Redirect to bank dashboard
-      await navigateTo('/admin')
+    if (response.success && response.user) {
+      // Redirect based on user role
+      const role = response.user.role || 'borrower'
+      
+      if (role === 'admin') {
+        await navigateTo('/admin')
+      } else if (role === 'bank') {
+        await navigateTo('/bank')
+      } else {
+        // Default to borrower or home page
+        await navigateTo('/')
+      }
     }
   } catch (err: any) {
     error.value = err?.message || err.data?.statusMessage || 'Invalid email or password. Please try again.'

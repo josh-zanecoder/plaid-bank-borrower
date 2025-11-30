@@ -421,6 +421,7 @@ import { ref, computed, onMounted } from 'vue'
 definePageMeta({
   title: 'Borrowers - Bank Dashboard',
   layout: false,
+  middleware: 'bank',
 })
 
 const loading = ref(false)

@@ -103,6 +103,11 @@ export async function findUserById(userId: string): Promise<IUser | null> {
   return await UserModel.findById(userId).lean()
 }
 
+export async function findUserByFirebaseUid(firebaseUid: string): Promise<IUser | null> {
+  const UserModel = await getUserModel()
+  return await UserModel.findOne({ firebaseUid }).lean()
+}
+
 export async function updateUser(userId: string, updateData: Partial<IUser>): Promise<IUser | null> {
   const UserModel = await getUserModel()
   return await UserModel.findByIdAndUpdate(

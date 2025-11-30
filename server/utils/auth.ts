@@ -4,7 +4,16 @@ import type { User } from '../models/User'
 
 export async function getCurrentUser(event: any): Promise<User | null> {
   try {
+    // Try to get user_id from cookie first
     let userId = getCookie(event, 'user_id') || getCookie(event, 'userId')
+    
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      const allCookies = getCookie(event, 'user_id')
+      if (!userId && allCookies) {
+        console.log('Cookie user_id found but empty:', allCookies)
+      }
+    }
     
     if (!userId) {
       const authHeader = getHeader(event, 'authorization')
@@ -42,8 +51,9 @@ export function setAuthCookie(event: any, userId: string): void {
   setCookie(event, 'user_id', userId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'lax' as const,
     maxAge: 60 * 60 * 24 * 7,
+    path: '/'
   })
 }
 

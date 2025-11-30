@@ -214,6 +214,7 @@ import ConfirmDeleteModal from '../../components/admin/ConfirmDeleteModal.vue'
 definePageMeta({
   title: 'Banks - Admin Dashboard',
   layout: false,
+  middleware: 'admin',
 })
 
 const loading = ref(false)

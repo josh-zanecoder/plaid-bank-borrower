@@ -239,6 +239,7 @@ import ConfirmDeleteModal from '../../components/admin/ConfirmDeleteModal.vue'
 definePageMeta({
   title: 'Borrowers - Admin Dashboard',
   layout: false,
+  middleware: 'admin',
 })
 
 const loading = ref(false)
