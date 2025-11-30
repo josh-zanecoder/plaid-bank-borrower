@@ -68,11 +68,23 @@
         <div class="px-6 py-4 border-b border-gray-200">
           <div class="flex items-center justify-between">
             <h2 class="text-lg font-semibold text-gray-900">All Borrowers</h2>
-            <button
-              @click="fetchBorrowers"
-              :disabled="loading"
-              class="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition disabled:opacity-50"
-            >
+            <div class="flex items-center gap-3">
+              <button
+                @click="openAddModal"
+                class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition cursor-pointer"
+              >
+                <span class="flex items-center gap-2">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Borrower
+                </span>
+              </button>
+              <button
+                @click="fetchBorrowers"
+                :disabled="loading"
+                class="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
               <span v-if="!loading" class="flex items-center gap-2">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -87,6 +99,7 @@
                 Loading...
               </span>
             </button>
+            </div>
           </div>
         </div>
 
@@ -175,24 +188,53 @@
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    @click="viewBorrower(borrower)"
-                    class="text-indigo-600 hover:text-indigo-900 transition"
-                  >
-                    View Details
-                  </button>
+                  <div class="flex items-center justify-end gap-3">
+                    <button
+                      @click="editBorrower(borrower)"
+                      class="text-indigo-600 hover:text-indigo-900 transition cursor-pointer"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      @click="confirmDeleteBorrower(borrower)"
+                      class="text-red-600 hover:text-red-900 transition cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
+
+      <!-- Add/Edit Borrower Modal -->
+      <AddOrEditBorrower
+        :isOpen="isModalOpen"
+        :borrower="selectedBorrower"
+        @close="closeModal"
+        @created="handleBorrowerCreated"
+        @updated="handleBorrowerUpdated"
+      />
+
+      <!-- Delete Confirmation Modal -->
+      <ConfirmDeleteModal
+        :isOpen="isDeleteModalOpen"
+        :loading="deletingBorrower"
+        :title="`Delete ${deleteBorrowerData?.firstName} ${deleteBorrowerData?.lastName}?`"
+        :message="`Are you sure you want to delete ${deleteBorrowerData?.firstName} ${deleteBorrowerData?.lastName}? This action cannot be undone.`"
+        @close="closeDeleteModal"
+        @confirm="handleDeleteConfirm"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import AddOrEditBorrower from '../../components/admin/AddOrEditBorrower.vue'
+import ConfirmDeleteModal from '../../components/admin/ConfirmDeleteModal.vue'
 
 definePageMeta({
   title: 'Borrowers - Admin Dashboard',
@@ -201,6 +243,11 @@ definePageMeta({
 
 const loading = ref(false)
 const borrowers = ref<any[]>([])
+const isModalOpen = ref(false)
+const selectedBorrower = ref<any | null>(null)
+const isDeleteModalOpen = ref(false)
+const deleteBorrowerData = ref<any | null>(null)
+const deletingBorrower = ref(false)
 
 const connectedCount = computed(() => {
   return borrowers.value.filter(b => b.financial_summary?.has_connected_accounts).length
@@ -213,12 +260,95 @@ const pendingCount = computed(() => {
 const fetchBorrowers = async () => {
   loading.value = true
   try {
-    borrowers.value = []
+    const response = await $fetch<{ success: boolean; data?: any[] }>('/api/admin/borrower/get.borrower')
+    if (response.success && response.data) {
+      borrowers.value = response.data
+    }
   } catch (err: any) {
     console.error('Error fetching borrowers:', err)
   } finally {
     loading.value = false
   }
+}
+
+const openAddModal = () => {
+  selectedBorrower.value = null
+  isModalOpen.value = true
+}
+
+const editBorrower = (borrower: any) => {
+  selectedBorrower.value = borrower
+  isModalOpen.value = true
+}
+
+const closeModal = () => {
+  isModalOpen.value = false
+  selectedBorrower.value = null
+}
+
+const handleBorrowerCreated = () => {
+  fetchBorrowers()
+}
+
+const handleBorrowerUpdated = () => {
+  fetchBorrowers()
+}
+
+const confirmDeleteBorrower = (borrower: any) => {
+  deleteBorrowerData.value = borrower
+  isDeleteModalOpen.value = true
+}
+
+const closeDeleteModal = () => {
+  if (!deletingBorrower.value) {
+    isDeleteModalOpen.value = false
+    deleteBorrowerData.value = null
+  }
+}
+
+const handleDeleteConfirm = async () => {
+  if (!deleteBorrowerData.value) return
+
+  deletingBorrower.value = true
+
+  try {
+    const response = await $fetch<{ success: boolean; message?: string }>(`/api/admin/borrower/${deleteBorrowerData.value.id || deleteBorrowerData.value._id}`, {
+      method: 'DELETE'
+    })
+
+    if (response.success) {
+      isDeleteModalOpen.value = false
+      deleteBorrowerData.value = null
+      await fetchBorrowers()
+      
+      // Show success toast (you can replace this with a proper toast component)
+      showToast('Borrower deleted successfully', 'success')
+    }
+  } catch (err: any) {
+    console.error('Error deleting borrower:', err)
+    showToast(err.data?.statusMessage || err.message || 'Failed to delete borrower', 'error')
+  } finally {
+    deletingBorrower.value = false
+  }
+}
+
+const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  // Simple toast implementation - you can replace this with a proper toast library
+  const toast = document.createElement('div')
+  toast.className = `fixed top-4 right-4 z-[10000] px-6 py-3 rounded-lg shadow-lg text-white font-medium transition-all transform translate-x-0 ${
+    type === 'success' ? 'bg-green-600' : 'bg-red-600'
+  }`
+  toast.textContent = message
+  
+  document.body.appendChild(toast)
+  
+  setTimeout(() => {
+    toast.style.transform = 'translateX(400px)'
+    toast.style.opacity = '0'
+    setTimeout(() => {
+      document.body.removeChild(toast)
+    }, 300)
+  }, 3000)
 }
 
 const getInitials = (name: string): string => {
@@ -244,10 +374,6 @@ const formatDate = (dateString: Date | string | undefined): string => {
   } catch {
     return 'N/A'
   }
-}
-
-const viewBorrower = (borrower: any) => {
-  console.log('View borrower:', borrower)
 }
 
 onMounted(() => {

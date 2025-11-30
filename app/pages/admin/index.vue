@@ -343,7 +343,10 @@ const fetchBanks = async () => {
 const fetchBorrowers = async () => {
   loadingBorrowers.value = true
   try {
-    borrowers.value = []
+    const response = await $fetch<{ success: boolean; data?: any[] }>('/api/admin/borrower/get.borrower')
+    if (response.success && response.data) {
+      borrowers.value = response.data
+    }
   } catch (err: any) {
     console.error('Error fetching borrowers:', err)
   } finally {

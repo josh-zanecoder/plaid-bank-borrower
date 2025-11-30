@@ -15,7 +15,6 @@ export interface IUser {
   _id?: string
   email: string
   name: string
-  password: string
   firebaseUid?: string
   firstName?: string
   lastName?: string
@@ -46,10 +45,6 @@ const UserSchema = new Schema<IUser>({
     trim: true,
   },
   name: {
-    type: String,
-    required: true,
-  },
-  password: {
     type: String,
     required: true,
   },
@@ -115,6 +110,12 @@ export async function updateUser(userId: string, updateData: Partial<IUser>): Pr
     { ...updateData, updatedAt: new Date() },
     { new: true }
   ).lean()
+}
+
+export async function deleteUser(userId: string): Promise<boolean> {
+  const UserModel = await getUserModel()
+  const result = await UserModel.findByIdAndDelete(userId)
+  return !!result
 }
 
 export { User }

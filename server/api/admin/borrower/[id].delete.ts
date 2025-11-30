@@ -1,4 +1,4 @@
-import { deleteBank, findBankById } from '../../../models/Banks'
+import { deleteBorrower, findBorrowerById } from '../../../models/Borrower'
 import { getFirebaseAuth } from '../../../lib/firebase'
 import { deleteUser } from '../../../models/User'
 
@@ -9,21 +9,21 @@ export default defineEventHandler(async (event) => {
     if (!id) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Bank ID is required'
+        statusMessage: 'Borrower ID is required'
       })
     }
 
-    const existingBank = await findBankById(id)
-    if (!existingBank) {
+    const existingBorrower = await findBorrowerById(id)
+    if (!existingBorrower) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Bank not found'
+        statusMessage: 'Borrower not found'
       })
     }
 
-    if (existingBank.userId) {
-      // Since findBankById uses .populate('userId'), userId is the full user object
-      const populatedUser = existingBank.userId as any
+    if (existingBorrower.userId) {
+      // Since findBorrowerById uses .populate('userId'), userId is the full user object
+      const populatedUser = existingBorrower.userId as any
       
       // Extract user ID and firebaseUid from populated user object
       const userId = populatedUser?._id?.toString() || populatedUser?.toString()
@@ -49,18 +49,18 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const deleted = await deleteBank(id)
+    const deleted = await deleteBorrower(id)
 
     if (!deleted) {
       throw createError({
         statusCode: 500,
-        statusMessage: 'Failed to delete bank'
+        statusMessage: 'Failed to delete borrower'
       })
     }
 
     return {
       success: true,
-      message: 'Bank deleted successfully'
+      message: 'Borrower deleted successfully'
     }
   } catch (error: any) {
     if (error.statusCode) {
@@ -69,7 +69,7 @@ export default defineEventHandler(async (event) => {
 
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to delete bank'
+      statusMessage: error.message || 'Failed to delete borrower'
     })
   }
 })

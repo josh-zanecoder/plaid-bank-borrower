@@ -165,10 +165,9 @@
                     </button>
                     <button
                       @click="confirmDeleteBank(bank)"
-                      :disabled="deletingBankId === (bank._id || bank.id)"
-                      class="text-red-600 hover:text-red-900 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      class="text-red-600 hover:text-red-900 transition cursor-pointer"
                     >
-                      {{ deletingBankId === (bank._id || bank.id) ? 'Deleting...' : 'Delete' }}
+                      Delete
                     </button>
                   </div>
                 </td>
@@ -193,6 +192,16 @@
         @close="showEditBankModal = false; selectedBank = null"
         @updated="handleBankUpdated"
       />
+
+      <!-- Delete Confirmation Modal -->
+      <ConfirmDeleteModal
+        :isOpen="isDeleteModalOpen"
+        :loading="deletingBankId !== null"
+        :title="`Delete ${deleteBankData?.name || deleteBankData?.email}?`"
+        :message="`Are you sure you want to delete ${deleteBankData?.name || deleteBankData?.email}? This action cannot be undone.`"
+        @close="closeDeleteModal"
+        @confirm="handleDeleteConfirm"
+      />
     </div>
   </div>
 </template>
@@ -200,6 +209,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import AddOrCreateBank from '../../components/admin/AddOrEditBank.vue'
+import ConfirmDeleteModal from '../../components/admin/ConfirmDeleteModal.vue'
 
 definePageMeta({
   title: 'Banks - Admin Dashboard',
@@ -212,6 +222,8 @@ const showAddBankModal = ref(false)
 const showEditBankModal = ref(false)
 const selectedBank = ref<any>(null)
 const deletingBankId = ref<string | null>(null)
+const isDeleteModalOpen = ref(false)
+const deleteBankData = ref<any | null>(null)
 
 const newThisMonth = computed(() => {
   const now = new Date()
@@ -272,27 +284,61 @@ const editBank = (bank: any) => {
   showEditBankModal.value = true
 }
 
-const confirmDeleteBank = async (bank: any) => {
-  if (!confirm(`Are you sure you want to delete ${bank.name || bank.email}? This action cannot be undone.`)) {
-    return
-  }
+const confirmDeleteBank = (bank: any) => {
+  deleteBankData.value = bank
+  isDeleteModalOpen.value = true
+}
 
-  deletingBankId.value = bank._id || bank.id
-  
+const closeDeleteModal = () => {
+  if (deletingBankId.value === null) {
+    isDeleteModalOpen.value = false
+    deleteBankData.value = null
+  }
+}
+
+const handleDeleteConfirm = async () => {
+  if (!deleteBankData.value) return
+
+  deletingBankId.value = deleteBankData.value._id || deleteBankData.value.id
+
   try {
-    const response = await $fetch<{ success: boolean; message?: string }>(`/api/admin/bank/${bank._id || bank.id}`, {
+    const response = await $fetch<{ success: boolean; message?: string }>(`/api/admin/bank/${deleteBankData.value._id || deleteBankData.value.id}`, {
       method: 'DELETE'
     })
 
     if (response.success) {
+      isDeleteModalOpen.value = false
+      deleteBankData.value = null
       await fetchBanks()
+      
+      showToast('Bank deleted successfully', 'success')
     }
   } catch (err: any) {
     console.error('Error deleting bank:', err)
-    alert(err.data?.statusMessage || err.message || 'Failed to delete bank')
+    showToast(err.data?.statusMessage || err.message || 'Failed to delete bank', 'error')
   } finally {
     deletingBankId.value = null
   }
+}
+
+const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  const toast = document.createElement('div')
+  toast.className = `fixed top-4 right-4 z-[10000] px-6 py-3 rounded-lg shadow-lg text-white font-medium transition-all transform translate-x-0 ${
+    type === 'success' ? 'bg-green-600' : 'bg-red-600'
+  }`
+  toast.textContent = message
+  
+  document.body.appendChild(toast)
+  
+  setTimeout(() => {
+    toast.style.transform = 'translateX(400px)'
+    toast.style.opacity = '0'
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast)
+      }
+    }, 300)
+  }, 3000)
 }
 
 const handleBankCreated = () => {

@@ -1,16 +1,16 @@
 import { getFirebaseAuth } from '../../../lib/firebase'
 import { createUser, findUserByEmail } from '../../../models/User'
-import { createBank } from '../../../models/Banks'
+import { createBorrower } from '../../../models/Borrower'
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { name, email, password } = body
+    const { firstName, lastName, email, password } = body
 
-    if (!name || !email || !password) {
+    if (!firstName || !lastName || !email || !password) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Name, email, and password are required'
+        statusMessage: 'First name, last name, email, and password are required'
       })
     }
 
@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
       firebaseUser = await firebaseAuth.createUser({
         email: normalizedEmail,
         password: password,
-        displayName: name,
+        displayName: `${firstName} ${lastName}`,
         emailVerified: false,
       })
       firebaseUid = firebaseUser.uid
@@ -62,9 +62,11 @@ export default defineEventHandler(async (event) => {
     try {
       mongoUser = await createUser({
         email: normalizedEmail,
-        name: name,
+        name: `${firstName} ${lastName}`,
+        firstName: firstName,
+        lastName: lastName,
         firebaseUid: firebaseUid,
-        role: 'bank',
+        role: 'borrower',
       })
     } catch (mongoError: any) {
       try {
@@ -78,34 +80,36 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    let bank
+    let borrower
     try {
-      bank = await createBank({
-        name: name,
+      borrower = await createBorrower({
+        firstName: firstName,
+        lastName: lastName,
         email: normalizedEmail,
         userId: mongoUser._id?.toString(),
       })
-    } catch (bankError: any) {
+    } catch (borrowerError: any) {
       try {
         await firebaseAuth.deleteUser(firebaseUid)
       } catch (deleteError) {
-        console.error('Failed to clean up Firebase user after bank creation error:', deleteError)
+        console.error('Failed to clean up Firebase user after borrower creation error:', deleteError)
       }
       throw createError({
         statusCode: 500,
-        statusMessage: `Failed to create bank: ${bankError.message}`
+        statusMessage: `Failed to create borrower: ${borrowerError.message}`
       })
     }
 
     return {
       success: true,
-      message: 'Bank created successfully',
+      message: 'Borrower created successfully',
       data: {
-        bank: {
-          id: bank._id?.toString(),
-          name: bank.name,
-          email: bank.email,
-          role: bank.role,
+        borrower: {
+          id: borrower._id?.toString(),
+          firstName: borrower.firstName,
+          lastName: borrower.lastName,
+          email: borrower.email,
+          role: borrower.role,
         },
         user: {
           id: mongoUser._id?.toString(),
@@ -123,7 +127,7 @@ export default defineEventHandler(async (event) => {
 
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Failed to create bank'
+      statusMessage: error.message || 'Failed to create borrower'
     })
   }
 })
