@@ -1,29 +1,11 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Header -->
-    <div class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900">Bank Dashboard</h1>
-            <p class="text-sm text-gray-600 mt-1">Manage borrowers and view applications</p>
-          </div>
-          <div class="flex items-center gap-4">
-            <button
-              @click="handleLogout"
-              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition cursor-pointer"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <AdminHeader />
 
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Stats Overview -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div class="flex items-center justify-between">
             <div>
@@ -41,8 +23,8 @@
         <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-gray-600 mb-1">Active Applications</p>
-              <p class="text-3xl font-bold text-gray-900">0</p>
+              <p class="text-sm font-medium text-gray-600 mb-1">With Accounts</p>
+              <p class="text-3xl font-bold text-gray-900">{{ connectedCount }}</p>
             </div>
             <div class="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
               <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -55,8 +37,8 @@
         <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-gray-600 mb-1">Pending Reviews</p>
-              <p class="text-3xl font-bold text-gray-900">0</p>
+              <p class="text-sm font-medium text-gray-600 mb-1">Pending Review</p>
+              <p class="text-3xl font-bold text-gray-900">{{ pendingCount }}</p>
             </div>
             <div class="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
               <svg class="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -65,21 +47,27 @@
             </div>
           </div>
         </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-600 mb-1">Approved</p>
+              <p class="text-3xl font-bold text-gray-900">0</p>
+            </div>
+            <div class="h-12 w-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+              <svg class="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Borrowers List -->
+      <!-- Borrowers Table -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-100">
         <div class="px-6 py-4 border-b border-gray-200">
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-              <h2 class="text-lg font-semibold text-gray-900">Borrowers</h2>
-              <NuxtLink
-                to="/bank/borrowers"
-                class="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
-              >
-                View All →
-              </NuxtLink>
-            </div>
+            <h2 class="text-lg font-semibold text-gray-900">All Borrowers</h2>
             <button
               @click="fetchBorrowers"
               :disabled="loading"
@@ -99,20 +87,6 @@
                 Loading...
               </span>
             </button>
-          </div>
-        </div>
-
-        <!-- Error Message -->
-        <div v-if="error" class="mx-6 mt-4 rounded-lg bg-red-50 border border-red-200 p-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-              </svg>
-            </div>
-            <div class="ml-3">
-              <p class="text-sm font-medium text-red-800">{{ error }}</p>
-            </div>
           </div>
         </div>
 
@@ -146,6 +120,9 @@
                   Contact
                 </th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Registered
                 </th>
                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -156,14 +133,14 @@
             <tbody class="bg-white divide-y divide-gray-200">
               <tr
                 v-for="borrower in borrowers"
-                :key="borrower._id"
+                :key="borrower._id || borrower.id"
                 class="hover:bg-gray-50 transition-colors"
               >
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center">
-                    <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                      <span class="text-indigo-600 font-semibold text-sm">
-                        {{ getInitials(borrower.name || `${borrower.firstName || ''} ${borrower.lastName || ''}`.trim()) }}
+                    <div class="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                      <span class="text-green-600 font-semibold text-sm">
+                        {{ getInitials(borrower.name || `${borrower.firstName || ''} ${borrower.lastName || ''}`.trim() || borrower.email) }}
                       </span>
                     </div>
                     <div class="ml-4">
@@ -176,9 +153,21 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm text-gray-900">{{ borrower.phoneNumber || 'N/A' }}</div>
-                  <div class="text-xs text-gray-500 mt-1">
-                    {{ borrower.email }}
-                  </div>
+                  <div class="text-xs text-gray-500 mt-1">{{ borrower.email }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span
+                    v-if="borrower.financial_summary?.has_connected_accounts"
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                  >
+                    Connected
+                  </span>
+                  <span
+                    v-else
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                  >
+                    No Accounts
+                  </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="text-sm text-gray-900">
@@ -203,28 +192,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 definePageMeta({
-  title: 'Bank Dashboard',
+  title: 'Borrowers - Admin Dashboard',
   layout: false,
 })
 
 const loading = ref(false)
-const error = ref('')
 const borrowers = ref<any[]>([])
+
+const connectedCount = computed(() => {
+  return borrowers.value.filter(b => b.financial_summary?.has_connected_accounts).length
+})
+
+const pendingCount = computed(() => {
+  return borrowers.value.filter(b => !b.financial_summary?.has_connected_accounts).length
+})
 
 const fetchBorrowers = async () => {
   loading.value = true
-  error.value = ''
-
   try {
-    const response = await $fetch<{ success: boolean; borrowers?: any[] }>('/api/bank/borrowers')
-    if (response.success) {
-      borrowers.value = response.borrowers || []
-    }
+    borrowers.value = []
   } catch (err: any) {
-    error.value = err.data?.statusMessage || err.message || 'Failed to load borrowers'
     console.error('Error fetching borrowers:', err)
   } finally {
     loading.value = false
@@ -258,16 +248,6 @@ const formatDate = (dateString: Date | string | undefined): string => {
 
 const viewBorrower = (borrower: any) => {
   console.log('View borrower:', borrower)
-}
-
-const handleLogout = async () => {
-  try {
-    await $fetch('/api/auth/logout', { method: 'POST' })
-    await navigateTo('/auth/login')
-  } catch (err) {
-    console.error('Error during logout:', err)
-    await navigateTo('/auth/login')
-  }
 }
 
 onMounted(() => {

@@ -16,6 +16,7 @@ export interface IUser {
   email: string
   name: string
   password: string
+  firebaseUid?: string
   firstName?: string
   lastName?: string
   phoneNumber?: string
@@ -52,6 +53,11 @@ const UserSchema = new Schema<IUser>({
     type: String,
     required: true,
   },
+  firebaseUid: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
   firstName: String,
   lastName: String,
   phoneNumber: String,
@@ -67,8 +73,6 @@ const UserSchema = new Schema<IUser>({
 }, {
   timestamps: true,
 })
-
-UserSchema.index({ email: 1 })
 
 const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema)
 

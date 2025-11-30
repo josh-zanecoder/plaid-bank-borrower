@@ -369,7 +369,7 @@ const handleLogin = async () => {
 
     if (response.success) {
       // Redirect to bank dashboard
-      await navigateTo('/bank')
+      await navigateTo('/admin')
     }
   } catch (err: any) {
     error.value = err?.message || err.data?.statusMessage || 'Invalid email or password. Please try again.'
@@ -378,7 +378,3 @@ const handleLogin = async () => {
   }
 }
 </script>
-
-<style scoped>
-/* Additional custom styles if needed */
-</style>
