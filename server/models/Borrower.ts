@@ -46,6 +46,22 @@ const BorrowerSchema = new Schema<IBorrower>({
     enum: ['bank_account', 'income_verification', 'consumer_report'],
     default: ['bank_account'],
     required: false,
+    validate: {
+      validator: function (v: string[]) {
+        // If no types selected, allow (will fall back to default)
+        if (!Array.isArray(v) || v.length === 0) {
+          return true
+        }
+        // If income_verification or consumer_report is selected,
+        // bank_account must also be included
+        const needsBankAccount = v.includes('income_verification') || v.includes('consumer_report')
+        if (needsBankAccount && !v.includes('bank_account')) {
+          return false
+        }
+        return true
+      },
+      message: 'Bank account connection is required when selecting Income Verification or Consumer Report',
+    },
   },
   accessToken: {
     type: String,

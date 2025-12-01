@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   if (getMethod(event) !== 'GET') {
     throw createError({
       statusCode: 405,
-      statusMessage: 'Method Not Allowed'
+      statusMessage: 'Method Not Allowed',
     })
   }
 
@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     if (!currentUser || !currentUser._id) {
       throw createError({
         statusCode: 401,
-        statusMessage: 'Authentication required'
+        statusMessage: 'Authentication required',
       })
     }
 
@@ -23,17 +23,26 @@ export default defineEventHandler(async (event) => {
     if (!bank || !bank._id) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Bank not found for this user'
+        statusMessage: 'Bank not found for this user',
       })
     }
 
     const query = getQuery(event)
-    const borrowerId = query.borrower_id as string
+    const borrowerId = typeof query.borrower_id === 'string' ? query.borrower_id : null
+    const assetReportToken =
+      typeof query.asset_report_token === 'string' ? query.asset_report_token : null
 
     if (!borrowerId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'borrower_id query parameter is required'
+        statusMessage: 'borrower_id query parameter is required',
+      })
+    }
+
+    if (!assetReportToken) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'asset_report_token query parameter is required',
       })
     }
 
@@ -41,7 +50,7 @@ export default defineEventHandler(async (event) => {
     if (!borrower) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Borrower not found'
+        statusMessage: 'Borrower not found',
       })
     }
 
@@ -53,46 +62,37 @@ export default defineEventHandler(async (event) => {
     if (borrowerBankId !== bank._id.toString()) {
       throw createError({
         statusCode: 403,
-        statusMessage: 'Access denied. This borrower does not belong to your bank.'
+        statusMessage: 'Access denied. This borrower does not belong to your bank.',
       })
     }
 
-    const BorrowerModel = await (await import('../../../models/Borrower')).getBorrowerModel()
-    const borrowerWithToken = await BorrowerModel.findById(borrowerId).select('+accessToken').lean()
-
-    if (!borrowerWithToken || !borrowerWithToken.accessToken) {
-      return {
-        success: true,
-        accounts: [],
-        item: null,
-        request_id: null,
-        message: 'Borrower has no connected Plaid account'
-      }
-    }
-
-    const accessToken = borrowerWithToken.accessToken as string
-
     const client = getPlaidClient()
 
-    const requestBody: any = {
-      access_token: accessToken,
-    }
-
-    const accountsResponse = await client.accountsGet(requestBody)
+    const assetReportResponse = await client.assetReportGet({
+      asset_report_token: assetReportToken,
+    })
 
     return {
       success: true,
-      accounts: accountsResponse.data.accounts || [],
-      item: accountsResponse.data.item || null,
-      request_id: accountsResponse.data.request_id || null,
+      report: assetReportResponse.data.report,
+      request_id: assetReportResponse.data.request_id,
+      status: 'ready',
     }
   } catch (error: any) {
-    console.error('Error fetching accounts:', error)
+    console.error('Error fetching asset report for borrower:', error)
 
     if (error.response?.data) {
+      if (error.response.data.error_code === 'PRODUCT_NOT_READY') {
+        return {
+          success: false,
+          status: 'creating',
+          message: 'Asset report is still being generated. Please try again in a few moments.',
+        }
+      }
+
       throw createError({
         statusCode: error.response.status || 400,
-        statusMessage: error.response.data.error_message || 'Failed to fetch accounts',
+        statusMessage: error.response.data.error_message || 'Failed to fetch asset report',
         data: error.response.data,
       })
     }

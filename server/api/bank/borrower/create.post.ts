@@ -2,6 +2,7 @@ import { getFirebaseAuth } from '../../../lib/firebase'
 import { createUser, findUserByEmail } from '../../../models/User'
 import { createBorrower } from '../../../models/Borrower'
 import { findBankByUserId } from '../../../models/Banks'
+import { PlaidConnectionType } from '../../../types/Borrower'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -101,6 +102,23 @@ export default defineEventHandler(async (event) => {
 
     let borrower
     try {
+      // Normalize and validate Plaid connection types
+      const finalPlaidConnectionTypes: PlaidConnectionType[] =
+        Array.isArray(plaidConnectionTypes) && plaidConnectionTypes.length > 0
+          ? plaidConnectionTypes
+          : ['bank_account']
+
+      const needsBankAccount =
+        finalPlaidConnectionTypes.includes(PlaidConnectionType.INCOME_VERIFICATION) ||
+        finalPlaidConnectionTypes.includes(PlaidConnectionType.CONSUMER_REPORT)
+
+      if (needsBankAccount && !finalPlaidConnectionTypes.includes(PlaidConnectionType.BANK_ACCOUNT)) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Bank Account connection is required when selecting Income Verification or Consumer Report',
+        })
+      }
+
       borrower = await createBorrower({
         firstName: firstName,
         lastName: lastName,
@@ -108,7 +126,7 @@ export default defineEventHandler(async (event) => {
         userId: mongoUser._id?.toString(),
         bankId: bank._id.toString(),
         addedBy: currentUser._id?.toString(),
-        plaidConnectionTypes: plaidConnectionTypes || ['bank_account'],
+        plaidConnectionTypes: finalPlaidConnectionTypes,
       })
     } catch (borrowerError: any) {
       try {

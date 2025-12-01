@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   if (getMethod(event) !== 'GET') {
     throw createError({
       statusCode: 405,
-      statusMessage: 'Method Not Allowed'
+      statusMessage: 'Method Not Allowed',
     })
   }
 
@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     if (!currentUser || !currentUser._id) {
       throw createError({
         statusCode: 401,
-        statusMessage: 'Authentication required'
+        statusMessage: 'Authentication required',
       })
     }
 
@@ -23,17 +23,17 @@ export default defineEventHandler(async (event) => {
     if (!bank || !bank._id) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Bank not found for this user'
+        statusMessage: 'Bank not found for this user',
       })
     }
 
     const query = getQuery(event)
-    const borrowerId = query.borrower_id as string
+    const borrowerId = typeof query.borrower_id === 'string' ? query.borrower_id : null
 
     if (!borrowerId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'borrower_id query parameter is required'
+        statusMessage: 'borrower_id query parameter is required',
       })
     }
 
@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
     if (!borrower) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Borrower not found'
+        statusMessage: 'Borrower not found',
       })
     }
 
@@ -53,7 +53,7 @@ export default defineEventHandler(async (event) => {
     if (borrowerBankId !== bank._id.toString()) {
       throw createError({
         statusCode: 403,
-        statusMessage: 'Access denied. This borrower does not belong to your bank.'
+        statusMessage: 'Access denied. This borrower does not belong to your bank.',
       })
     }
 
@@ -64,9 +64,12 @@ export default defineEventHandler(async (event) => {
       return {
         success: true,
         accounts: [],
-        item: null,
-        request_id: null,
-        message: 'Borrower has no connected Plaid account'
+        liabilities: {
+          credit: null,
+          mortgage: null,
+          student: null,
+        },
+        message: 'Borrower has no connected Plaid account',
       }
     }
 
@@ -74,25 +77,41 @@ export default defineEventHandler(async (event) => {
 
     const client = getPlaidClient()
 
-    const requestBody: any = {
+    const liabilitiesResponse = await client.liabilitiesGet({
       access_token: accessToken,
-    }
-
-    const accountsResponse = await client.accountsGet(requestBody)
+    })
 
     return {
       success: true,
-      accounts: accountsResponse.data.accounts || [],
-      item: accountsResponse.data.item || null,
-      request_id: accountsResponse.data.request_id || null,
+      ...liabilitiesResponse.data,
     }
   } catch (error: any) {
-    console.error('Error fetching accounts:', error)
+    console.error('Error fetching liabilities for borrower:', error)
+
+    const errorCode = error.response?.data?.error_code || error.response?.data?.error?.error_code
+    const errorMessage =
+      error.response?.data?.error_message || error.response?.data?.error?.error_message || ''
+
+    if (
+      errorCode === 'ITEM_ERROR' ||
+      errorMessage.toLowerCase().includes('no valid liability') ||
+      errorMessage.toLowerCase().includes('no liability account')
+    ) {
+      return {
+        success: true,
+        accounts: [],
+        liabilities: {
+          credit: null,
+          mortgage: null,
+          student: null,
+        },
+      }
+    }
 
     if (error.response?.data) {
       throw createError({
         statusCode: error.response.status || 400,
-        statusMessage: error.response.data.error_message || 'Failed to fetch accounts',
+        statusMessage: error.response.data.error_message || 'Failed to fetch liabilities',
         data: error.response.data,
       })
     }
