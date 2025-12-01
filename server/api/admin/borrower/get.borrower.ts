@@ -14,6 +14,8 @@ export default defineEventHandler(async (event) => {
         email: borrower.email,
         role: borrower.role,
         userId: borrower.userId,
+        bankId: borrower.bankId,
+        addedBy: borrower.addedBy,
         createdAt: borrower.createdAt,
         updatedAt: borrower.updatedAt,
       }))

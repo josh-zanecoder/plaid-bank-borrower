@@ -1,3 +1,9 @@
+export enum PlaidConnectionType {
+  BANK_ACCOUNT = 'bank_account',
+  INCOME_VERIFICATION = 'income_verification',
+  CONSUMER_REPORT = 'consumer_report',
+}
+
 export interface IBorrower {
   _id?: string
   firstName: string
@@ -5,6 +11,11 @@ export interface IBorrower {
   email: string
   role: 'borrower'
   userId?: string
+  bankId?: string
+  addedBy?: string
+  plaidConnectionTypes?: PlaidConnectionType[]
+  accessToken?: string
+  userToken?: string
   createdAt?: Date
   updatedAt?: Date
 }
@@ -16,5 +27,8 @@ export interface CreateBorrowerInput {
   lastName: string
   email: string
   userId?: string
+  bankId?: string
+  addedBy?: string
+  plaidConnectionTypes?: PlaidConnectionType[]
 }
 

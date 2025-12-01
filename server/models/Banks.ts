@@ -70,6 +70,12 @@ export async function findBankByEmail(email: string): Promise<IBank | null> {
     .lean()
 }
 
+export async function findBankByUserId(userId: string): Promise<IBank | null> {
+  const BankModel = await getBankModel()
+  return await BankModel.findOne({ userId })
+    .populate('userId')
+    .lean()
+}
 
 export async function findBankById(bankId: string): Promise<IBank | null> {
   const BankModel = await getBankModel()

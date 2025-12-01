@@ -1,4 +1,5 @@
 import { updateBorrower, findBorrowerById } from '../../../models/Borrower'
+import { findBankByUserId } from '../../../models/Banks'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -11,8 +12,26 @@ export default defineEventHandler(async (event) => {
       })
     }
 
+    // Get the current bank user
+    const currentUser = (event.context as any).user
+    if (!currentUser || !currentUser._id) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Authentication required'
+      })
+    }
+
+    // Find the bank associated with this user
+    const bank = await findBankByUserId(currentUser._id.toString())
+    if (!bank || !bank._id) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Bank not found for this user'
+      })
+    }
+
     const body = await readBody(event)
-    const { firstName, lastName, email, bankId } = body
+    const { firstName, lastName, email, plaidConnectionTypes } = body
 
     if (!firstName || !lastName || !email) {
       throw createError({
@@ -31,11 +50,21 @@ export default defineEventHandler(async (event) => {
 
     const normalizedEmail = email.toLowerCase().trim()
 
+    // Check if borrower exists and belongs to this bank
     const existingBorrower = await findBorrowerById(id)
     if (!existingBorrower) {
       throw createError({
         statusCode: 404,
         statusMessage: 'Borrower not found'
+      })
+    }
+
+    // Verify borrower belongs to this bank
+    const borrowerBankId = existingBorrower.bankId?.toString() || (existingBorrower.bankId as any)?._id?.toString()
+    if (borrowerBankId !== bank._id.toString()) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'You do not have permission to update this borrower'
       })
     }
 
@@ -45,10 +74,10 @@ export default defineEventHandler(async (event) => {
       email: normalizedEmail,
     }
     
-    if (bankId) {
-      updateData.bankId = bankId
+    if (plaidConnectionTypes !== undefined) {
+      updateData.plaidConnectionTypes = plaidConnectionTypes
     }
-    
+
     const updatedBorrower = await updateBorrower(id, updateData)
 
     if (!updatedBorrower) {

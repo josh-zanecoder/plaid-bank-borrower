@@ -1,6 +1,6 @@
 import { connectMongoDB } from '../lib/mongodb'
 import mongoose, { Schema } from 'mongoose'
-import type { IBorrower } from '../types/Borrower'
+import type { IBorrower, PlaidConnectionType } from '../types/Borrower'
 
 const BorrowerSchema = new Schema<IBorrower>({
   firstName: {
@@ -31,11 +31,39 @@ const BorrowerSchema = new Schema<IBorrower>({
     ref: 'User',
     required: false,
   },
+  bankId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Bank',
+    required: true,
+  },
+  addedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: false,
+  },
+  plaidConnectionTypes: {
+    type: [String],
+    enum: ['bank_account', 'income_verification', 'consumer_report'],
+    default: ['bank_account'],
+    required: false,
+  },
+  accessToken: {
+    type: String,
+    required: false,
+    select: false,
+  },
+  userToken: {
+    type: String,
+    required: false,
+    select: false,
+  },
 }, {
   timestamps: true,
 })
 
 BorrowerSchema.index({ userId: 1 })
+BorrowerSchema.index({ bankId: 1 })
+BorrowerSchema.index({ addedBy: 1 })
 
 const Borrower = mongoose.models.Borrower || mongoose.model<IBorrower>('Borrower', BorrowerSchema)
 
@@ -49,6 +77,9 @@ export async function createBorrower(borrowerData: {
   lastName: string
   email: string
   userId?: string
+  bankId: string
+  addedBy?: string
+  plaidConnectionTypes?: PlaidConnectionType[]
 }): Promise<IBorrower> {
   const BorrowerModel = await getBorrowerModel()
   
@@ -73,6 +104,8 @@ export async function findBorrowerByEmail(email: string): Promise<IBorrower | nu
   const BorrowerModel = await getBorrowerModel()
   return await BorrowerModel.findOne({ email: email.toLowerCase().trim() })
     .populate('userId')
+    .populate('bankId')
+    .populate('addedBy')
     .lean()
 }
 
@@ -80,13 +113,18 @@ export async function findBorrowerById(borrowerId: string): Promise<IBorrower | 
   const BorrowerModel = await getBorrowerModel()
   return await BorrowerModel.findById(borrowerId)
     .populate('userId')
+    .populate('bankId')
+    .populate('addedBy')
     .lean()
 }
 
-export async function findAllBorrowers(): Promise<IBorrower[]> {
+export async function findAllBorrowers(bankId?: string): Promise<IBorrower[]> {
   const BorrowerModel = await getBorrowerModel()
-  return await BorrowerModel.find()
+  const query = bankId ? { bankId } : {}
+  return await BorrowerModel.find(query)
     .populate('userId')
+    .populate('bankId')
+    .populate('addedBy')
     .lean()
     .sort({ createdAt: -1 })
 }
@@ -99,6 +137,8 @@ export async function updateBorrower(borrowerId: string, updateData: Partial<IBo
     { new: true }
   )
     .populate('userId')
+    .populate('bankId')
+    .populate('addedBy')
     .lean()
 }
 

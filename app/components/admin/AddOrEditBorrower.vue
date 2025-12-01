@@ -84,6 +84,26 @@
                 />
               </div>
 
+              <!-- Bank Selection -->
+              <div class="w-full">
+                <label for="bankId" class="block text-sm font-semibold text-gray-700 mb-2">
+                  Assign to Bank *
+                </label>
+                <select
+                  id="bankId"
+                  v-model="form.bankId"
+                  required
+                  :disabled="loading || loadingBanks"
+                  class="block w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition text-gray-900 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select a bank...</option>
+                  <option v-for="bank in banks" :key="bank._id || bank.id" :value="bank._id || bank.id">
+                    {{ bank.name || bank.email }}
+                  </option>
+                </select>
+                <p v-if="loadingBanks" class="mt-1 text-xs text-gray-500">Loading banks...</p>
+              </div>
+
               <!-- Password Input (only for create mode) -->
               <div v-if="!isEditMode" class="w-full">
                 <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
@@ -199,18 +219,22 @@ const form = reactive({
   lastName: '',
   email: '',
   password: '',
+  bankId: '',
 })
 
 const showPassword = ref(false)
 const loading = ref(false)
+const loadingBanks = ref(false)
 const error = ref('')
 const success = ref('')
+const banks = ref<any[]>([])
 
 const resetForm = () => {
   form.firstName = ''
   form.lastName = ''
   form.email = ''
   form.password = ''
+  form.bankId = ''
   error.value = ''
   success.value = ''
   showPassword.value = false
@@ -234,6 +258,7 @@ const handleSubmit = async () => {
           firstName: form.firstName.trim(),
           lastName: form.lastName.trim(),
           email: form.email.trim(),
+          bankId: form.bankId || props.borrower?.bankId,
         }
       })
 
@@ -253,6 +278,7 @@ const handleSubmit = async () => {
           lastName: form.lastName.trim(),
           email: form.email.trim(),
           password: form.password,
+          bankId: form.bankId,
         }
       })
 
@@ -272,13 +298,32 @@ const handleSubmit = async () => {
   }
 }
 
+const fetchBanks = async () => {
+  loadingBanks.value = true
+  try {
+    const response = await $fetch<{ success: boolean; banks?: any[] }>('/api/admin/bank/get.bank')
+    if (response.success && response.banks) {
+      banks.value = response.banks
+    }
+  } catch (err) {
+    console.error('Failed to fetch banks:', err)
+    error.value = 'Failed to load banks. Please refresh the page.'
+  } finally {
+    loadingBanks.value = false
+  }
+}
+
 watch(() => props.isOpen, (newValue) => {
-  if (newValue && props.borrower) {
-    form.firstName = props.borrower.firstName || ''
-    form.lastName = props.borrower.lastName || ''
-    form.email = props.borrower.email || ''
-    form.password = ''
-  } else if (!newValue) {
+  if (newValue) {
+    fetchBanks()
+    if (props.borrower) {
+      form.firstName = props.borrower.firstName || ''
+      form.lastName = props.borrower.lastName || ''
+      form.email = props.borrower.email || ''
+      form.bankId = props.borrower.bankId || ''
+      form.password = ''
+    }
+  } else {
     resetForm()
   }
 })
@@ -288,6 +333,7 @@ watch(() => props.borrower, (newBorrower) => {
     form.firstName = newBorrower.firstName || ''
     form.lastName = newBorrower.lastName || ''
     form.email = newBorrower.email || ''
+    form.bankId = newBorrower.bankId || ''
     form.password = ''
   }
 })

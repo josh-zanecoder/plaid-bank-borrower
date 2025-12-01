@@ -13,6 +13,7 @@ export default defineNuxtConfig({
     '@nuxt/scripts',
     '@nuxt/test-utils',
     '@nuxt/ui',
+    '@pinia/nuxt',
   ],
   
   vite: {
@@ -28,6 +29,15 @@ export default defineNuxtConfig({
     firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
     firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL,
     firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY,
+    plaidClientId: process.env.PLAID_CLIENT_ID,
+    plaidSecret: process.env.PLAID_SECRET,
+    plaidEnv: process.env.PLAID_ENV || 'sandbox',
+    plaidProducts: process.env.PLAID_PRODUCTS || 'transactions',
+    plaidCountryCodes: process.env.PLAID_COUNTRY_CODES || 'US',
+    plaidClientName: process.env.PLAID_CLIENT_NAME || 'Underwriting Platform',
+    plaidRedirectUri: process.env.PLAID_REDIRECT_URI || '',
+    plaidWebhookUrl: process.env.PLAID_WEBHOOK_URL || '',
+    plaidAndroidPackageName: process.env.PLAID_ANDROID_PACKAGE_NAME || '',
     public: {
       firebaseApiKey: process.env.FIREBASE_API_KEY,
       firebaseAuthDomain: process.env.FIREBASE_AUTH_DOMAIN,

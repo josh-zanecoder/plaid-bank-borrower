@@ -1,16 +1,17 @@
 import { getFirebaseAuth } from '../../../lib/firebase'
 import { createUser, findUserByEmail } from '../../../models/User'
 import { createBorrower } from '../../../models/Borrower'
+import { findBankByUserId } from '../../../models/Banks'
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
-    const { firstName, lastName, email, password, bankId } = body
+    const { firstName, lastName, email, password, plaidConnectionTypes } = body
 
-    if (!firstName || !lastName || !email || !password || !bankId) {
+    if (!firstName || !lastName || !email || !password) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'First name, last name, email, password, and bank ID are required'
+        statusMessage: 'First name, last name, email, and password are required'
       })
     }
 
@@ -29,6 +30,24 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 400,
         statusMessage: 'User with this email already exists'
+      })
+    }
+
+    // Get the current bank user
+    const currentUser = (event.context as any).user
+    if (!currentUser || !currentUser._id) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Authentication required to create borrower'
+      })
+    }
+
+    // Find the bank associated with this user
+    const bank = await findBankByUserId(currentUser._id.toString())
+    if (!bank || !bank._id) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Bank not found for this user'
       })
     }
 
@@ -80,19 +99,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    const currentUser = (event.context as any).user
-    if (!currentUser || !currentUser._id) {
-      try {
-        await firebaseAuth.deleteUser(firebaseUid)
-      } catch (deleteError) {
-        console.error('Failed to clean up Firebase user:', deleteError)
-      }
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Authentication required to create borrower'
-      })
-    }
-
     let borrower
     try {
       borrower = await createBorrower({
@@ -100,8 +106,9 @@ export default defineEventHandler(async (event) => {
         lastName: lastName,
         email: normalizedEmail,
         userId: mongoUser._id?.toString(),
-        bankId: bankId,
+        bankId: bank._id.toString(),
         addedBy: currentUser._id?.toString(),
+        plaidConnectionTypes: plaidConnectionTypes || ['bank_account'],
       })
     } catch (borrowerError: any) {
       try {
