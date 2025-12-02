@@ -531,6 +531,230 @@
             </div>
           </div>
 
+          <!-- Payroll Income Section -->
+          <div class="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Payroll Income</h2>
+              <button
+                v-if="!loadingPayrollIncome"
+                @click="fetchPayrollIncome()"
+                class="text-xs text-indigo-600 hover:text-indigo-700 font-medium cursor-pointer flex items-center gap-1"
+              >
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
+            </div>
+
+            <div v-if="loadingPayrollIncome" class="bg-gray-50 rounded-lg p-6 text-center">
+              <svg class="animate-spin h-6 w-6 text-indigo-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <p class="mt-2 text-sm text-gray-600">Loading payroll income...</p>
+            </div>
+
+            <div v-else-if="payrollIncomeError" class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+              <svg class="h-12 w-12 text-yellow-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p class="text-yellow-800 font-medium">Payroll Income Not Available</p>
+              <p class="text-sm text-yellow-700 mt-1">
+                {{ payrollIncomeError }}
+              </p>
+            </div>
+
+            <div
+              v-else-if="payrollIncome && payrollIncome.items && Array.isArray(payrollIncome.items) && payrollIncome.items.length > 0"
+              class="space-y-4"
+            >
+              <div
+                v-for="(item, itemIndex) in payrollIncome.items"
+                :key="itemIndex"
+                class="bg-gray-50 rounded-lg p-4 border border-gray-200 space-y-4"
+              >
+                <div v-if="item.institution_name" class="flex items-center justify-between">
+                  <h3 class="text-sm font-semibold text-gray-900">{{ item.institution_name }}</h3>
+                  <span
+                    v-if="item.status"
+                    :class="{
+                      'px-2 py-1 rounded text-xs font-medium': true,
+                      'bg-green-100 text-green-800': item.status.processing_status === 'PROCESSING_COMPLETE',
+                      'bg-yellow-100 text-yellow-800': item.status.processing_status === 'PROCESSING',
+                      'bg-red-100 text-red-800': item.status.processing_status === 'FAILED',
+                    }"
+                  >
+                    {{ item.status.processing_status }}
+                  </span>
+                </div>
+
+                <!-- Payroll Income Items -->
+                <div
+                  v-if="item.payroll_income && Array.isArray(item.payroll_income) && item.payroll_income.length > 0"
+                  class="space-y-3"
+                >
+                  <div
+                    v-for="(payroll, payrollIndex) in item.payroll_income"
+                    :key="payrollIndex"
+                    class="bg-white rounded-lg p-4 border border-gray-100"
+                  >
+                    <!-- Summary -->
+                    <div v-if="payroll.pay_stubs && payroll.pay_stubs.length > 0" class="mb-4">
+                      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <p class="text-xs text-gray-500 mb-1">Latest Pay Period</p>
+                          <p class="text-sm font-semibold text-gray-900">
+                            {{ formatDate(payroll.pay_stubs[0]?.pay_period_details?.start_date) }} - {{ formatDate(payroll.pay_stubs[0]?.pay_period_details?.end_date) }}
+                          </p>
+                        </div>
+                        <div>
+                          <p class="text-xs text-gray-500 mb-1">Gross Earnings</p>
+                          <p class="text-sm font-semibold text-green-700">
+                            {{ formatCurrency(payroll.pay_stubs[0]?.pay_period_details?.gross_earnings || 0) }}
+                          </p>
+                        </div>
+                        <div>
+                          <p class="text-xs text-gray-500 mb-1">Net Pay</p>
+                          <p class="text-sm font-semibold text-blue-700">
+                            {{ formatCurrency(payroll.pay_stubs[0]?.pay_period_details?.pay_amount || 0) }}
+                          </p>
+                        </div>
+                        <div>
+                          <p class="text-xs text-gray-500 mb-1">YTD Net</p>
+                          <p class="text-sm font-semibold text-gray-900">
+                            {{ formatCurrency(payroll.pay_stubs[0]?.net_pay?.ytd_amount || 0) }}
+                          </p>
+                        </div>
+                      </div>
+                      <div class="mt-3 pt-3 border-t border-gray-200">
+                        <p class="text-xs text-gray-500">
+                          Pay Stubs: {{ payroll.pay_stubs.length }} | 
+                          Employer: {{ payroll.pay_stubs[0]?.employer?.name || 'N/A' }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="bg-gray-50 rounded-lg p-6 text-center">
+              <p class="text-gray-600 font-medium">No payroll income found</p>
+              <p class="text-sm text-gray-500 mt-1">
+                This borrower has not completed income verification or payroll data is not available yet.
+              </p>
+            </div>
+          </div>
+
+          <!-- CRA Base Report Section -->
+          <div class="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Consumer Report (CRA)</h2>
+              <button
+                v-if="!loadingCraReport"
+                @click="fetchCraReport()"
+                class="text-xs text-indigo-600 hover:text-indigo-700 font-medium cursor-pointer flex items-center gap-1"
+              >
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
+            </div>
+
+            <div v-if="loadingCraReport" class="bg-gray-50 rounded-lg p-6 text-center">
+              <svg class="animate-spin h-6 w-6 text-indigo-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <p class="mt-2 text-sm text-gray-600">Loading consumer report...</p>
+            </div>
+
+            <div v-else-if="craReportError" class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+              <svg class="h-12 w-12 text-yellow-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p class="text-yellow-800 font-medium">Consumer Report Not Available</p>
+              <p class="text-sm text-yellow-700 mt-1">
+                {{ craReportError }}
+              </p>
+            </div>
+
+            <div v-else-if="craReport && craReport.report" class="space-y-4">
+              <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-sm font-semibold text-gray-900">Report Details</h3>
+                  <span
+                    v-if="craReport.report.status"
+                    :class="{
+                      'px-2 py-1 rounded text-xs font-medium': true,
+                      'bg-green-100 text-green-800': craReport.report.status === 'COMPLETE',
+                      'bg-yellow-100 text-yellow-800': craReport.report.status === 'PROCESSING',
+                      'bg-red-100 text-red-800': craReport.report.status === 'FAILED',
+                    }"
+                  >
+                    {{ craReport.report.status }}
+                  </span>
+                </div>
+
+                <div v-if="craReport.report.request_id" class="mb-3">
+                  <p class="text-xs text-gray-500">Request ID</p>
+                  <p class="text-sm font-medium text-gray-900">{{ craReport.report.request_id }}</p>
+                </div>
+
+                <div v-if="craReport.report.date_generated" class="mb-3">
+                  <p class="text-xs text-gray-500">Generated Date</p>
+                  <p class="text-sm font-medium text-gray-900">{{ formatDate(craReport.report.date_generated) }}</p>
+                </div>
+
+                <div v-if="craReport.report.days_requested" class="mb-3">
+                  <p class="text-xs text-gray-500">Days Requested</p>
+                  <p class="text-sm font-medium text-gray-900">{{ craReport.report.days_requested }}</p>
+                </div>
+
+                <!-- Report Items -->
+                <div v-if="craReport.report.items && Array.isArray(craReport.report.items) && craReport.report.items.length > 0" class="mt-4 space-y-3">
+                  <h4 class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Report Items</h4>
+                  <div
+                    v-for="(item, idx) in craReport.report.items"
+                    :key="idx"
+                    class="bg-white rounded-lg p-3 border border-gray-100"
+                  >
+                    <p v-if="item.institution_id" class="text-xs text-gray-500">Institution ID</p>
+                    <p v-if="item.institution_id" class="text-sm font-medium text-gray-900 mb-2">{{ item.institution_id }}</p>
+                    <p v-if="item.institution_name" class="text-xs text-gray-500">Institution Name</p>
+                    <p v-if="item.institution_name" class="text-sm font-medium text-gray-900">{{ item.institution_name }}</p>
+                  </div>
+                </div>
+
+                <!-- PDF Download -->
+                <div v-if="craReport.pdf" class="mt-4 pt-4 border-t border-gray-200">
+                  <a
+                    :href="`data:application/pdf;base64,${craReport.pdf}`"
+                    download="cra-base-report.pdf"
+                    class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition"
+                  >
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Download PDF Report
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+              <svg class="h-12 w-12 text-yellow-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p class="text-yellow-800 font-medium">Consumer Report Not Available</p>
+              <p class="text-sm text-yellow-700 mt-1">
+                This borrower needs to share their consumer report. Please ask them to complete the consumer report setup in their borrower portal.
+              </p>
+            </div>
+          </div>
+
           <!-- Transactions Section -->
           <div class="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
             <div class="flex items-center justify-between mb-2">
@@ -687,6 +911,14 @@ const assetPollAttempts = ref(0)
 const liabilities = ref<any | null>(null)
 const loadingLiabilities = ref(false)
 const liabilitiesError = ref('')
+
+const payrollIncome = ref<any | null>(null)
+const loadingPayrollIncome = ref(false)
+const payrollIncomeError = ref('')
+
+const craReport = ref<any | null>(null)
+const loadingCraReport = ref(false)
+const craReportError = ref('')
 
 const fullName = computed(() => {
   if (!props.borrower) return ''
@@ -1025,10 +1257,108 @@ const fetchLiabilities = async () => {
   }
 }
 
+const fetchPayrollIncome = async () => {
+  if (!props.borrower?._id && !props.borrower?.id) return
+
+  loadingPayrollIncome.value = true
+  payrollIncomeError.value = ''
+
+  try {
+    const borrowerId = props.borrower.id || props.borrower._id
+    const response = await $fetch<{
+      success: boolean
+      credit_payroll_income?: any
+      message?: string
+    }>(`/api/plaid/credit/payroll_income?borrower_id=${borrowerId}`)
+
+    if (response.success) {
+      if (response.credit_payroll_income && response.credit_payroll_income.items && Array.isArray(response.credit_payroll_income.items) && response.credit_payroll_income.items.length > 0) {
+        payrollIncome.value = response.credit_payroll_income
+        payrollIncomeError.value = ''
+      } else {
+        // No payroll income data available - check if there's a specific message
+        payrollIncome.value = null
+        if (response.message && (response.message.toLowerCase().includes('not completed') || response.message.toLowerCase().includes('has not completed'))) {
+          payrollIncomeError.value = 'This borrower needs to verify their income. Please ask them to complete income verification in their borrower portal.'
+        } else {
+          payrollIncomeError.value = 'This borrower needs to verify their income. Please ask them to complete income verification in their borrower portal.'
+        }
+      }
+    }
+  } catch (err: any) {
+    console.error('Error fetching payroll income:', err)
+    const errorMessage = err.data?.statusMessage || err.message || 'Failed to fetch payroll income'
+    
+    // Check if error indicates borrower needs to verify income
+    const errorLower = errorMessage.toLowerCase()
+    if (errorLower.includes('not found') ||
+        errorLower.includes('data was not found') ||
+        errorLower.includes('unable to load') ||
+        errorLower.includes('user token not found') ||
+        errorLower.includes('has not completed income verification') ||
+        errorLower.includes('no payroll income') ||
+        errorLower.includes('please check the id supplied')) {
+      payrollIncomeError.value = 'This borrower needs to verify their income. Please ask them to complete income verification in their borrower portal.'
+    } else {
+      payrollIncomeError.value = errorMessage
+    }
+  } finally {
+    loadingPayrollIncome.value = false
+  }
+}
+
+const fetchCraReport = async () => {
+  if (!props.borrower?._id && !props.borrower?.id) return
+
+  loadingCraReport.value = true
+  craReportError.value = ''
+
+  try {
+    const borrowerId = props.borrower.id || props.borrower._id
+    const response = await $fetch<{
+      success: boolean
+      report?: any
+      pdf?: string | null
+      request_id?: string
+      message?: string
+    }>(`/api/plaid/consumer_report/cra_base_report?borrower_id=${borrowerId}`)
+
+    if (response.success && response.report) {
+      craReport.value = {
+        report: response.report,
+        pdf: response.pdf,
+        request_id: response.request_id,
+      }
+    } else if (response.success === false) {
+      // Report not ready yet or not available
+      craReport.value = null
+    }
+  } catch (err: any) {
+    console.error('Error fetching CRA base report:', err)
+    const errorMessage = err.data?.statusMessage || err.message || 'Failed to fetch CRA base report'
+    
+    // Check if error indicates user needs to share consumer report
+    const errorLower = errorMessage.toLowerCase()
+    if (errorLower.includes('consumer report identity') || 
+        errorLower.includes('does not have consumer report') ||
+        errorLower.includes('consumer report setup') ||
+        errorLower.includes('user does not have') ||
+        errorLower.includes('user/update')) {
+      craReportError.value = 'This borrower needs to share their consumer report. Please ask them to complete the consumer report setup in their borrower portal.'
+    } else {
+      craReportError.value = errorMessage
+    }
+  } finally {
+    loadingCraReport.value = false
+  }
+}
+
 onMounted(() => {
   fetchAccounts()
   fetchTransactions()
   fetchLiabilities()
+  fetchPayrollIncome()
+  fetchCraReport()
 })
 </script>
 

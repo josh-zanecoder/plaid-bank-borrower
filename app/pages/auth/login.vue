@@ -375,8 +375,10 @@ const handleLogin = async () => {
         await navigateTo('/admin')
       } else if (role === 'bank') {
         await navigateTo('/bank')
+      } else if (role === 'borrower') {
+        await navigateTo('/borrower')
       } else {
-        // Default to borrower or home page
+        // Default to home page
         await navigateTo('/')
       }
     }

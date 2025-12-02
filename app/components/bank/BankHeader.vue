@@ -11,7 +11,7 @@
               </svg>
             </div>
             <span class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
-              Bank Portal
+              Underwriting Portal
             </span>
           </NuxtLink>
         </div>

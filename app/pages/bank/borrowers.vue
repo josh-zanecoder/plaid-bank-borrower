@@ -6,8 +6,8 @@
     <!-- Main Content -->
     <div class="pt-16">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <!-- Search and Actions Bar -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <!-- Search and Actions Bar (hidden when viewing borrower details) -->
+        <div v-if="!selectedBorrower" class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div class="flex-1 w-full sm:max-w-md">
               <div class="relative">
@@ -52,8 +52,8 @@
           </div>
         </div>
 
-        <!-- Error Message -->
-        <div v-if="error" class="mb-6 rounded-lg bg-red-50 border border-red-200 p-4">
+        <!-- Error Message (hidden when viewing borrower details) -->
+        <div v-if="!selectedBorrower && error" class="mb-6 rounded-lg bg-red-50 border border-red-200 p-4">
           <div class="flex">
             <div class="flex-shrink-0">
               <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -106,9 +106,6 @@
                     Contact
                   </th>
                   <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Registered
                   </th>
                   <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -139,20 +136,6 @@
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm text-gray-900">{{ borrower.phoneNumber || 'N/A' }}</div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span
-                      v-if="borrower.financial_summary?.has_connected_accounts"
-                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                    >
-                      Connected
-                    </span>
-                    <span
-                      v-else
-                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
-                    >
-                      Pending
-                    </span>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm text-gray-900">

@@ -42,8 +42,12 @@ export default defineEventHandler(async (event) => {
     }
 
     // Verify borrower belongs to this bank
-    const borrowerBankId = existingBorrower.bankId?.toString() || (existingBorrower.bankId as any)?._id?.toString()
-    if (borrowerBankId !== bank._id.toString()) {
+    const borrowerBankId =
+      typeof existingBorrower.bankId === 'object' && existingBorrower.bankId !== null
+        ? (existingBorrower.bankId as any)._id?.toString()
+        : existingBorrower.bankId?.toString()
+
+    if (!borrowerBankId || borrowerBankId !== bank._id.toString()) {
       throw createError({
         statusCode: 403,
         statusMessage: 'You do not have permission to delete this borrower'
